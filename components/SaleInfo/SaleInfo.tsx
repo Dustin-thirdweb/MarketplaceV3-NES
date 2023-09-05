@@ -1,7 +1,6 @@
 import { NFT as NFTType } from "@thirdweb-dev/sdk";
 import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-
 import styles from "../../styles/Sale.module.css";
 import profileStyles from "../../styles/Profile.module.css";
 import {
@@ -42,38 +41,24 @@ type DirectFormData = {
 
 export default function SaleInfo({ nft }: Props) {
   const router = useRouter();
-  // Connect to marketplace contract
-  const { contract: marketplace } = useContract(
-    MARKETPLACE_ADDRESS,
-    "marketplace-v3"
-  );
-
-  // useContract is a React hook that returns an object with the contract key.
-  // The value of the contract key is an instance of an NFT_COLLECTION on the blockchain.
-  // This instance is created from the contract address (NFT_COLLECTION_ADDRESS)
+  const { contract: marketplace } = useContract(MARKETPLACE_ADDRESS, "marketplace-v3");
   const { contract: nftCollection } = useContract(NFT_COLLECTION_ADDRESS);
-  const { contract } = useContract(NFT_COLLECTION_ADDRESS);
   const tokenId = nft.metadata.id;
   const [isLoading, setIsLoading] = useState(false);
-  const { data: isStaked, isLoading: isCheckingStaked } = useContractRead(contract, "isStaked", [tokenId]);
-  const [showMessage, setShowMessage] = useState(false);
-  useEffect(() => {
-    setTab(isStaked ? "stake" : "direct");
-  }, [isStaked]);
-  
-
-  // Hook provides an async function to create a new auction listing
-  const { mutateAsync: createAuctionListing } =
-    useCreateAuctionListing(marketplace);
-
-  // Hook provides an async function to create a new direct listing
-  const { mutateAsync: createDirectListing } =
-    useCreateDirectListing(marketplace);
-
-  // Manage form submission state using tabs and conditional rendering
+  const { data: isStaked, isLoading: isCheckingStaked } = useContractRead(
+    nftCollection,
+    "isStaked",
+    [tokenId]
+  );
+  const { mutateAsync: createAuctionListing } = useCreateAuctionListing(marketplace);
+  const { mutateAsync: createDirectListing } = useCreateDirectListing(marketplace);
   const [tab, setTab] = useState<"direct" | "auction" | "stake">(
     isStaked ? "stake" : "direct"
   );
+
+  useEffect(() => {
+    setTab(isStaked ? "stake" : "direct");
+  }, [isStaked]);
 
   // Manage form values using react-hook-form library: Auction form
   const { register: registerAuction, handleSubmit: handleSubmitAuction } =
@@ -85,6 +70,18 @@ export default function SaleInfo({ nft }: Props) {
         endDate: new Date(),
         floorPrice: "0",
         buyoutPrice: "0",
+      },
+    });
+
+  // Manage form values using react-hook-form library: Direct form
+  const { register: registerDirect, handleSubmit: handleSubmitDirect } =
+    useForm<DirectFormData>({
+      defaultValues: {
+        nftContractAddress: NFT_COLLECTION_ADDRESS,
+        tokenId: nft.metadata.id,
+        startDate: new Date(),
+        endDate: new Date(),
+        price: "0",
       },
     });
 
@@ -142,18 +139,6 @@ export default function SaleInfo({ nft }: Props) {
 
     return true;
   }
-
-  // Manage form values using react-hook-form library: Direct form
-  const { register: registerDirect, handleSubmit: handleSubmitDirect } =
-    useForm<DirectFormData>({
-      defaultValues: {
-        nftContractAddress: NFT_COLLECTION_ADDRESS,
-        tokenId: nft.metadata.id,
-        startDate: new Date(),
-        endDate: new Date(),
-        price: "0",
-      },
-    });
 
   async function handleSubmissionAuction(data: AuctionFormData) {
     await checkAndProvideApproval();
